@@ -42,8 +42,9 @@ module ov7670_config #(
             21:setting=16'h5100;22:setting=16'h523d;23:setting=16'h53a7;
             24:setting=16'h54e4;25:setting=16'h589e;
             26:setting=16'h3dc0;27:setting=16'h13e7;28:setting=16'h1e00;
-            29:setting={8'h42,bars?8'h08:8'h00};
-            30:setting=16'h1200;31:setting=16'h4000;
+            29:setting=16'hb084; // reserved reg, needed for correct color (common OV7670 init)
+            30:setting={8'h42,bars?8'h08:8'h00};
+            31:setting=16'h1200;32:setting=16'h4000;
             default:setting=0;
         endcase
     endfunction
@@ -64,17 +65,17 @@ module ov7670_config #(
                         else delay_count<=delay_count+1'b1;
             ISSUE: if(!busy) begin
                 address<=entry[15:8];value<=entry[7:0];
-                read<=(index==1 || index==2 || index>=30);start<=1;state<=WAIT_BUS;
+                read<=(index==1 || index==2 || index>=31);start<=1;state<=WAIT_BUS;
             end
             WAIT_BUS: if(done) begin
                 if(index==1) sensor_id[15:8]<=returned;
                 if(index==2) sensor_id[7:0]<=returned;
                 if(nack || (index==1 && returned!=8'h76) || (index==2 && returned!=8'h73) ||
-                   (index==30 && returned!=8'h04) || (index==31 && returned!=8'hd0)) begin
+                   (index==31 && returned!=8'h04) || (index==32 && returned!=8'hd0)) begin
                     failed<=1;ready<=0;state<=FINISHED;
                     error_code<=nack?1:(index<3?2:3);
                 end else if(index==0) begin index<=1;delay_count<=0;state<=WAIT_RESET;end
-                else if(index==31) begin delay_count<=0;state<=DELAY;end
+                else if(index==32) begin delay_count<=0;state<=DELAY;end
                 else begin index<=index+1'b1;state<=ISSUE;end
             end
             DELAY: if(delay_count==SETTLE_CYCLES-1) begin ready<=1;state<=FINISHED;end
